@@ -7,12 +7,15 @@ Be careful if you change anything in !
 '''
 
 ignore_list = (
+    'kivy._clock',
     'kivy._event',
     'kivy.factory_registers',
     'kivy.graphics.buffer',
     'kivy.graphics.vbo',
     'kivy.graphics.vertex',
-    'kivy.lib.osc'
+    'kivy.uix.recycleview.__init__',
+    'kivy.setupconfig',
+    'kivy.version'
 )
 
 import os
@@ -36,18 +39,19 @@ import kivy.core.text
 import kivy.core.text.markup
 import kivy.core.video
 import kivy.core.window
-import kivy.ext
 import kivy.geometry
 import kivy.graphics
 import kivy.graphics.shader
 import kivy.graphics.tesselator
 import kivy.animation
+import kivy.modules.console
 import kivy.modules.keybinding
 import kivy.modules.monitor
 import kivy.modules.touchring
 import kivy.modules.inspector
 import kivy.modules.recorder
 import kivy.modules.screen
+import kivy.modules.joycursor
 import kivy.storage
 import kivy.storage.dictstore
 import kivy.storage.jsonstore
@@ -55,34 +59,42 @@ import kivy.storage.redisstore
 import kivy.network.urlrequest
 import kivy.modules.webdebugger
 import kivy.support
+try:
+    import kivy.tools.packaging.pyinstaller_hooks
+except ImportError:
+    pass
 import kivy.input.recorder
 import kivy.interactive
 import kivy.garden
 from kivy.factory import Factory
+from kivy.lib import ddsfile, mtdev
 
 # check for silenced build
-BE_QUIET = False
-for arg in sys.argv:
-    if "silenced=" in arg:
-        if arg.split("=")[1] == "yes":
-            BE_QUIET = True
+BE_QUIET = True
+if os.environ.get('BE_QUIET') == 'False':
+    BE_QUIET = False
 
 # force loading of all classes from factory
 for x in list(Factory.classes.keys())[:]:
     getattr(Factory, x)
-
 
 # Directory of doc
 base_dir = os.path.dirname(__file__)
 dest_dir = os.path.join(base_dir, 'sources')
 examples_framework_dir = os.path.join(base_dir, '..', 'examples', 'framework')
 
+# Check touch file
+base = 'autobuild.py-done'
+with open(os.path.join(base_dir, base), 'w') as f:
+    f.write('')
+
 
 def writefile(filename, data):
     global dest_dir
     # avoid to rewrite the file if the content didn't change
     f = os.path.join(dest_dir, filename)
-    if not BE_QUIET: print('write', filename)
+    if not BE_QUIET:
+        print('write', filename)
     if os.path.exists(f):
         with open(f) as fd:
             if fd.read() == data:
@@ -143,6 +155,11 @@ writefile('api-index.rst', api_index)
 
 
 # Create index for all packages
+# Note on displaying inherited members;
+#     Adding the directive ':inherited-members:' to automodule achieves this
+#     but is not always desired. Please see
+#         https://github.com/kivy/kivy/pull/3870
+
 template = '\n'.join((
     '=' * 100,
     '$SUMMARY',
@@ -174,8 +191,8 @@ template_examples_ref = ('# :ref:`Jump directly to Examples'
 
 def extract_summary_line(doc):
     """
-    :param doc:  the __doc__ field of a module
-    :return:  a doc string suitable for a header or empty string
+    :param doc: the __doc__ field of a module
+    :return: a doc string suitable for a header or empty string
     """
     if doc is None:
         return ''
@@ -207,7 +224,7 @@ for package in packages:
 
     # search modules
     m = list(modules.keys())
-    m.sort(key=lambda x: extract_summary_line(sys.modules[x].__doc__))
+    m.sort(key=lambda x: extract_summary_line(sys.modules[x].__doc__).upper())
     for module in m:
         packagemodule = module.rsplit('.', 1)[0]
         if packagemodule != package:

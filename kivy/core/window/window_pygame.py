@@ -1,5 +1,10 @@
 '''
 Window Pygame: windowing provider based on Pygame
+
+.. warning::
+
+    Pygame has been deprecated and will be removed in the release after Kivy
+    1.11.0.
 '''
 
 __all__ = ('WindowPygame', )
@@ -19,7 +24,6 @@ from kivy.logger import Logger
 from kivy.base import stopTouchApp, EventLoop
 from kivy.utils import platform, deprecated
 from kivy.resources import resource_find
-from kivy.clock import Clock
 
 try:
     android = None
@@ -34,6 +38,11 @@ glReadPixels = GL_RGBA = GL_UNSIGNED_BYTE = None
 
 class WindowPygame(WindowBase):
 
+    @deprecated(
+        msg='Pygame has been deprecated and will be removed after 1.11.0')
+    def __init__(self, *largs, **kwargs):
+        super(WindowPygame, self).__init__(*largs, **kwargs)
+
     def create_window(self, *largs):
         # ensure the mouse is still not up after window creation, otherwise, we
         # have some weird bugs
@@ -41,7 +50,7 @@ class WindowPygame(WindowBase):
 
         # force display to show (available only for fullscreen)
         displayidx = Config.getint('graphics', 'display')
-        if not 'SDL_VIDEO_FULLSCREEN_HEAD' in environ and displayidx != -1:
+        if 'SDL_VIDEO_FULLSCREEN_HEAD' not in environ and displayidx != -1:
             environ['SDL_VIDEO_FULLSCREEN_HEAD'] = '%d' % displayidx
 
         # init some opengl, same as before.
@@ -155,7 +164,7 @@ class WindowPygame(WindowBase):
 
         info = pygame.display.Info()
         self._size = (info.current_w, info.current_h)
-        #self.dispatch('on_resize', *self._size)
+        # self.dispatch('on_resize', *self._size)
 
         # in order to debug futur issue with pygame/display, let's show
         # more debug output.
@@ -183,17 +192,16 @@ class WindowPygame(WindowBase):
         super(WindowPygame, self).create_window()
 
         # set mouse visibility
-        pygame.mouse.set_visible(
-            Config.getboolean('graphics', 'show_cursor'))
+        self._set_cursor_state(self.show_cursor)
 
-        # if we are on android platform, automaticly create hooks
+        # if we are on android platform, automatically create hooks
         if android:
             from kivy.support import install_android
             install_android()
 
     def close(self):
         pygame.display.quit()
-        self.dispatch('on_close')
+        super(WindowPygame, self).close()
 
     def on_title(self, instance, value):
         if self.initialized:
@@ -253,6 +261,9 @@ class WindowPygame(WindowBase):
             hwnd, win32con.WM_SETICON, win32con.ICON_BIG, icon_big)
         return True
 
+    def _set_cursor_state(self, value):
+        pygame.mouse.set_visible(value)
+
     def screenshot(self, *largs, **kwargs):
         global glReadPixels, GL_RGBA, GL_UNSIGNED_BYTE
         filename = super(WindowPygame, self).screenshot(*largs, **kwargs)
@@ -284,9 +295,7 @@ class WindowPygame(WindowBase):
             self.flags |= pygame.FULLSCREEN
         self._pygame_set_mode()
 
-    def _mainloop(self):
-        EventLoop.idle()
-
+    def mainloop(self):
         for event in pygame.event.get():
 
             # kill application (SIG_TERM)
@@ -338,7 +347,8 @@ class WindowPygame(WindowBase):
 
             # joystick action
             elif event.type == pygame.JOYAXISMOTION:
-                self.dispatch('on_joy_axis', event.joy, event.axis, event.value)
+                self.dispatch('on_joy_axis', event.joy, event.axis,
+                                event.value)
 
             elif event.type == pygame.JOYHATMOTION:
                 self.dispatch('on_joy_hat', event.joy, event.hat, event.value)
@@ -394,21 +404,8 @@ class WindowPygame(WindowBase):
             else:
                 Logger.debug('WinPygame: Unhandled event %s' % str(event))
             '''
-
-    def mainloop(self):
-        while not EventLoop.quit and EventLoop.status == 'started':
-            try:
-                self._mainloop()
-                if not pygame.display.get_active():
-                    pygame.time.wait(100)
-            except BaseException as inst:
-                # use exception manager first
-                r = ExceptionManager.handle_exception(inst)
-                if r == ExceptionManager.RAISE:
-                    stopTouchApp()
-                    raise
-                else:
-                    pass
+        if not pygame.display.get_active():
+            pygame.time.wait(100)
 
     #
     # Pygame wrapper

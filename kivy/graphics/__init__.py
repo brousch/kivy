@@ -27,13 +27,13 @@ a widget, you can create all the instructions needed for drawing. If
         # Add a rectangle
         Rectangle(pos=(10, 10), size=(500, 500))
 
-The instructions :class:`Color` and :class:`Rectangle` are automaticly added to
-the canvas object and will be used when the window is drawn.
+The instructions :class:`Color` and :class:`Rectangle` are automatically added
+to the canvas object and will be used when the window is drawn.
 
 .. note::
 
-    Kivy drawing instructions are not automatically relative to the widgets
-    position or size. You therefore you need to consider these factors when
+    Kivy drawing instructions are not automatically relative to the position
+    or size of the widget. You, therefore, need to consider these factors when
     drawing. In order to make your drawing instructions relative to the widget,
     the instructions need either to be
     declared in the :mod:`KvLang <kivy.lang>` or bound to pos and size changes.
@@ -47,7 +47,7 @@ GL Reloading mechanism
 During the lifetime of the application, the OpenGL context might be lost. This
 happens:
 
-- when the window is resized on MacOSX or the Windows platform and you're
+- when the window is resized on OS X or the Windows platform and you're
   using pygame as a window provider. This is due to SDL 1.2. In the SDL 1.2
   design, it needs to recreate a GL context everytime the window is
   resized. This was fixed in SDL 1.3 but pygame is not yet available on it
@@ -94,12 +94,13 @@ from kivy.graphics.context_instructions import BindTexture, Color, \
     PopMatrix, PushMatrix, Rotate, Scale, Translate, LoadIdentity, \
     UpdateNormalMatrix, gl_init_resources
 from kivy.graphics.vertex_instructions import Bezier, BorderImage, Ellipse, \
-    GraphicException, Line, Mesh, Point, Quad, Rectangle, Triangle
+    GraphicException, Line, Mesh, Point, Quad, Rectangle, RoundedRectangle, \
+    Triangle, SmoothLine
 from kivy.graphics.stencil_instructions import StencilPop, StencilPush, \
     StencilUse, StencilUnUse
 from kivy.graphics.gl_instructions import ClearColor, ClearBuffers
 from kivy.graphics.fbo import Fbo
-from kivy.graphics.scissor_instructions import  ScissorPush, ScissorPop
+from kivy.graphics.scissor_instructions import ScissorPush, ScissorPop
 
 # very hacky way to avoid pyflakes warning...
 __all__ = (Bezier.__name__, BindTexture.__name__, BorderImage.__name__,
@@ -107,11 +108,11 @@ __all__ = (Bezier.__name__, BindTexture.__name__, BorderImage.__name__,
            Color.__name__, ContextInstruction.__name__,
            Ellipse.__name__, Fbo.__name__, GraphicException.__name__,
            Instruction.__name__, InstructionGroup.__name__,
-           Line.__name__, MatrixInstruction.__name__, Mesh.__name__,
-           Point.__name__, PopMatrix.__name__, PushMatrix.__name__,
-           Quad.__name__, Rectangle.__name__, RenderContext.__name__,
-           Rotate.__name__, Scale.__name__, StencilPop.__name__,
-           StencilPush.__name__, StencilUse.__name__,
+           Line.__name__, SmoothLine.__name__, MatrixInstruction.__name__,
+           Mesh.__name__, Point.__name__, PopMatrix.__name__,
+           PushMatrix.__name__, Quad.__name__, Rectangle.__name__,
+           RenderContext.__name__, Rotate.__name__, Scale.__name__,
+           StencilPop.__name__, StencilPush.__name__, StencilUse.__name__,
            StencilUnUse.__name__, Translate.__name__, Triangle.__name__,
            VertexInstruction.__name__, ClearColor.__name__,
            ClearBuffers.__name__, gl_init_resources.__name__,

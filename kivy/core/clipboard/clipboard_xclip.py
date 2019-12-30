@@ -1,5 +1,6 @@
 '''
-Clipboard xclip: an implementation of the Clipboard using xclip command line tool.
+Clipboard xclip: an implementation of the Clipboard using xclip
+command line tool.
 '''
 
 __all__ = ('ClipboardXclip', )
@@ -25,4 +26,3 @@ class ClipboardXclip(ClipboardExternalBase):
         pipe = {'std' + inout: subprocess.PIPE}
         return subprocess.Popen(
             ['xclip', '-' + inout, '-selection', selection], **pipe)
-

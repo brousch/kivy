@@ -5,10 +5,14 @@ Audio tests
 
 import unittest
 import os
+import pytest
+if os.environ.get('KIVY_TEST_AUDIO') == '0':
+    pytestmark = pytest.mark.skip("Audio is not available")
 
 SAMPLE_FILE = os.path.join(os.path.dirname(__file__), 'sample1.ogg')
 SAMPLE_LENGTH = 1.402
 DELTA = SAMPLE_LENGTH * 0.01
+DELAY = 0.2
 
 
 class AudioTestCase(unittest.TestCase):
@@ -32,7 +36,7 @@ class AudioTestCase(unittest.TestCase):
         sound = self.get_sound()
         sound.play()
         try:
-            time.sleep(0.1)
+            time.sleep(DELAY)
             length = sound.length
             self.assertAlmostEqual(SAMPLE_LENGTH, length, delta=DELTA)
         finally:
@@ -44,7 +48,7 @@ class AudioTestCase(unittest.TestCase):
         sound = self.get_sound()
         sound.play()
         try:
-            time.sleep(0.1)
+            time.sleep(DELAY)
         finally:
             sound.stop()
         length = sound.length

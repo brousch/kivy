@@ -2,6 +2,9 @@
 Tree View
 =========
 
+.. image:: images/treeview.png
+    :align: right
+
 .. versionadded:: 1.0.4
 
 
@@ -271,7 +274,7 @@ class TreeView(Widget):
         self._root = self.add_node(tvlabel, None)
 
         trigger = self._trigger_layout
-        fbind = self.fast_bind
+        fbind = self.fbind
         fbind('pos', trigger)
         fbind('size', trigger)
         fbind('indent_level', trigger)
@@ -303,7 +306,7 @@ class TreeView(Widget):
             parent.nodes.append(node)
             node.parent_node = parent
             node.level = parent.level + 1
-        node.fast_bind('size', self._trigger_layout)
+        node.fbind('size', self._trigger_layout)
         self._trigger_layout()
         return node
 
@@ -331,7 +334,7 @@ class TreeView(Widget):
                 nodes.remove(node)
             parent.is_leaf = not bool(len(nodes))
             node.parent_node = None
-            node.fast_unbind('size', self._trigger_layout)
+            node.funbind('size', self._trigger_layout)
             self._trigger_layout()
 
     def on_node_expand(self, node):
@@ -349,6 +352,15 @@ class TreeView(Widget):
             self._selected_node.is_selected = False
         node.is_selected = True
         self._selected_node = node
+
+    def deselect_node(self, *args):
+        '''Deselect any selected node.
+
+        .. versionadded:: 1.10.0
+        '''
+        if self._selected_node:
+            self._selected_node.is_selected = False
+            self._selected_node = None
 
     def toggle_node(self, node):
         '''Toggle the state of the node (open/collapsed).
@@ -445,10 +457,8 @@ class TreeView(Widget):
         self._do_layout_node(self.root, 0, self.top)
         # now iterate for calculating minimum size
         min_width = min_height = 0
-        count = 0
-        for node in self.iterate_open_nodes(self.root):
+        for count, node in enumerate(self.iterate_open_nodes(self.root)):
             node.odd = False if count % 2 else True
-            count += 1
             min_width = max(min_width, node.right - self.x)
             min_height += node.height
         self.minimum_size = (min_width, min_height)
@@ -511,7 +521,7 @@ class TreeView(Widget):
 
     .. versionadded:: 1.0.9
 
-    :attr:`minimum_width` is a :class:`kivy.properties.NumericProperty` and
+    :attr:`minimum_width` is a :class:`~kivy.properties.NumericProperty` and
     defaults to 0.
     '''
 
@@ -520,7 +530,7 @@ class TreeView(Widget):
 
     .. versionadded:: 1.0.9
 
-    :attr:`minimum_height` is a :class:`kivy.properties.NumericProperty` and
+    :attr:`minimum_height` is a :class:`~kivy.properties.NumericProperty` and
     defaults to 0.
     '''
 

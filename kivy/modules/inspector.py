@@ -82,6 +82,7 @@ from kivy.properties import ObjectProperty, BooleanProperty, ListProperty, \
 from kivy.graphics.texture import Texture
 from kivy.clock import Clock
 from kivy.lang import Builder
+from kivy.weakproxy import WeakProxy
 
 
 Builder.load_string('''
@@ -216,17 +217,23 @@ Builder.load_string('''
         Color:
             rgba: 1, 1, 1, int(not self.is_leaf)
         Rectangle:
-            source: 'atlas://data/images/defaulttheme/tree_%s' % ('opened' if self.is_open else 'closed')
+            source:
+                ('atlas://data/images/defaulttheme/tree_%s' %
+                ('opened' if self.is_open else 'closed'))
             size: 16, 16
             pos: self.x - 20, self.center_y - 8
 
     canvas:
         Color:
-            rgba: self.disabled_color if self.disabled else (self.color if not self.markup else (1, 1, 1, 1))
+            rgba:
+                (self.disabled_color if self.disabled else
+                (self.color if not self.markup else (1, 1, 1, 1)))
         Rectangle:
             texture: self.texture
             size: self.texture_size
-            pos: int(self.center_x - self.texture_size[0] / 2.), int(self.center_y - self.texture_size[1] / 2.)
+            pos:
+                (int(self.center_x - self.texture_size[0] / 2.),
+                int(self.center_y - self.texture_size[1] / 2.))
 ''')
 
 
@@ -237,11 +244,11 @@ class TreeViewProperty(BoxLayout, TreeViewNode):
     def _get_widget(self):
         wr = self.widget_ref
         if wr is None:
-            return None
+            return
         wr = wr()
         if wr is None:
             self.widget_ref = None
-            return None
+            return
         return wr
     widget = AliasProperty(_get_widget, None, bind=('widget_ref', ))
 
@@ -274,7 +281,7 @@ class WidgetTree(TreeView):
                     return node
             except ReferenceError:
                 pass
-        return None
+        return
 
     def update_selected_widget(self, widget):
         if widget:
@@ -330,10 +337,12 @@ class Inspector(FloatLayout):
 
     at_bottom = BooleanProperty(True)
 
+    _update_widget_tree_ev = None
+
     def __init__(self, **kwargs):
+        self.win = kwargs.pop('win', None)
         super(Inspector, self).__init__(**kwargs)
         self.avoid_bring_to_top = False
-        self.win = kwargs.get('win')
         with self.canvas.before:
             self.gcolor = Color(1, 0, 0, .25)
             PushMatrix()
@@ -344,8 +353,8 @@ class Inspector(FloatLayout):
 
     def on_touch_down(self, touch):
         ret = super(Inspector, self).on_touch_down(touch)
-        if (('button' not in touch.profile or touch.button == 'left')
-                and not ret and self.inspect_enabled):
+        if (('button' not in touch.profile or touch.button == 'left') and
+                not ret and self.inspect_enabled):
             self.highlight_at(*touch.pos)
             if touch.is_double_tap:
                 self.inspect_enabled = False
@@ -367,7 +376,7 @@ class Inspector(FloatLayout):
         return ret
 
     def on_window_children(self, win, children):
-        if self.avoid_bring_to_top:
+        if self.avoid_bring_to_top or not self.activated:
             return
         self.avoid_bring_to_top = True
         win.remove_widget(self)
@@ -380,7 +389,7 @@ class Inspector(FloatLayout):
         # modalviews before others
         win_children = self.win.children
         children = chain(
-            (c for c in reversed(win_children) if isinstance(c, ModalView)),
+            (c for c in win_children if isinstance(c, ModalView)),
             (c for c in reversed(win_children) if not isinstance(c, ModalView))
         )
         for child in children:
@@ -469,11 +478,16 @@ class Inspector(FloatLayout):
             else:
                 Animation(y=self.height - 60, t='out_quad', d=.3).start(
                     self.layout)
-            Clock.schedule_interval(self.update_widget_tree, 1)
+            ev = self._update_widget_tree_ev
+            if ev is None:
+                ev = self._update_widget_tree_ev = Clock.schedule_interval(
+                    self.update_widget_tree, 1)
+            else:
+                ev()
             self.update_widget_tree()
 
     def animation_close(self, instance, value):
-        if self.activated is False:
+        if not self.activated:
             self.inspect_enabled = False
             self.win.remove_widget(self)
             self.content.clear_widgets()
@@ -481,8 +495,11 @@ class Inspector(FloatLayout):
             for node in list(treeview.iterate_all_nodes()):
                 node.widget_ref = None
                 treeview.remove_node(node)
+
             self._window_node = None
-            Clock.unschedule(self.update_widget_tree)
+            if self._update_widget_tree_ev is not None:
+                self._update_widget_tree_ev.cancel()
+
             widgettree = self.widgettree
             for node in list(widgettree.iterate_all_nodes()):
                 widgettree.remove_node(node)
@@ -514,10 +531,12 @@ class Inspector(FloatLayout):
         keys = list(widget.properties().keys())
         keys.sort()
         node = None
-        wk_widget = weakref.ref(widget)
+        if type(widget) is WeakProxy:
+            wk_widget = widget.__ref__
+        else:
+            wk_widget = weakref.ref(widget)
         for key in keys:
-            text = '%s' % key
-            node = TreeViewProperty(text=text, key=key, widget_ref=wk_widget)
+            node = TreeViewProperty(key=key, widget_ref=wk_widget)
             node.bind(is_selected=self.show_property)
             try:
                 widget.bind(**{key: partial(
@@ -535,7 +554,8 @@ class Inspector(FloatLayout):
 
     def keyboard_shortcut(self, win, scancode, *largs):
         modifiers = largs[-1]
-        if scancode == 101 and modifiers == ['ctrl']:
+        if scancode == 101 and set(modifiers) & {'ctrl'} and not set(
+                modifiers) & {'shift', 'alt', 'meta'}:
             self.activated = not self.activated
             if self.activated:
                 self.inspect_enabled = True
@@ -571,7 +591,7 @@ class Inspector(FloatLayout):
         dtype = None
 
         if isinstance(prop, AliasProperty) or nested:
-            # trying to resolve type dynamicly
+            # trying to resolve type dynamically
             if type(value) in (str, str):
                 dtype = 'string'
             elif type(value) in (int, float):
@@ -684,7 +704,9 @@ class Inspector(FloatLayout):
             if child in nodes:
                 cnode = tree.add_node(nodes[child], node)
             else:
-                cnode = tree.add_node(TreeViewWidget(text=child.__class__.__name__, widget=child.proxy_ref, is_open=is_open), node)
+                cnode = tree.add_node(TreeViewWidget(
+                    text=child.__class__.__name__, widget=child.proxy_ref,
+                    is_open=is_open), node)
             update_nodes.append((cnode, child))
         return update_nodes
 
@@ -693,7 +715,8 @@ class Inspector(FloatLayout):
             self._window_node = self.widgettree.add_node(
                 TreeViewWidget(text='Window', widget=self.win, is_open=True))
 
-        nodes = self._update_widget_tree_node(self._window_node, self.win, is_open=True)
+        nodes = self._update_widget_tree_node(self._window_node, self.win,
+                                              is_open=True)
         while nodes:
             ntmp = nodes[:]
             nodes = []
@@ -705,8 +728,8 @@ class Inspector(FloatLayout):
 
 def create_inspector(win, ctx, *l):
     '''Create an Inspector instance attached to the *ctx* and bound to the
-    Windows :meth:`~kivy.core.window.WindowBase.on_keyboard` event for capturing
-    the keyboard shortcut.
+    Window's :meth:`~kivy.core.window.WindowBase.on_keyboard` event for
+    capturing the keyboard shortcut.
 
         :Parameters:
             `win`: A :class:`Window <kivy.core.window.WindowBase>`
@@ -723,11 +746,15 @@ def create_inspector(win, ctx, *l):
 
 
 def start(win, ctx):
-    Clock.schedule_once(partial(create_inspector, win, ctx))
+    ctx.ev_late_create = Clock.schedule_once(
+        partial(create_inspector, win, ctx))
 
 
 def stop(win, ctx):
     '''Stop and unload any active Inspectors for the given *ctx*.'''
+    if hasattr(ctx, 'ev_late_create'):
+        ctx.ev_late_create.cancel()
+        del ctx.ev_late_create
     if hasattr(ctx, 'inspector'):
         win.unbind(children=ctx.inspector.on_window_children,
                    on_keyboard=ctx.inspector.keyboard_shortcut)

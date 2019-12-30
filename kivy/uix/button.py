@@ -7,8 +7,10 @@ Button
 
 The :class:`Button` is a :class:`~kivy.uix.label.Label` with associated actions
 that are triggered when the button is pressed (or released after a
-click/touch). To configure the button, the same properties are used
-as for the Label class::
+click/touch). To configure the button, the same properties (padding,
+font_size, etc) and
+:ref:`sizing system <kivy-uix-label-sizing-and-text-content>`
+are used as for the :class:`~kivy.uix.label.Label` class::
 
     button = Button(text='Hello world', font_size=14)
 
@@ -30,6 +32,15 @@ to the :attr:`Button.state` property::
         print('My button <%s> state is <%s>' % (instance, value))
     btn1 = Button(text='Hello world 1')
     btn1.bind(state=callback)
+
+Kv Example::
+
+    Button:
+        text: 'press me'
+        on_press: print("ouch! More gently please")
+        on_release: print("ahhh")
+        on_state:
+            print("my current state is {}".format(self.state))
 
 '''
 
@@ -114,7 +125,7 @@ class Button(ButtonBehavior, Label):
     graphics instruction. Used with :attr:`background_normal` and
     :attr:`background_down`. Can be used for custom backgrounds.
 
-    It must be a list of four values: (top, right, bottom, left). Read the
+    It must be a list of four values: (bottom, right, top, left). Read the
     BorderImage instruction for more information about how to use it.
 
     :attr:`border` is a :class:`~kivy.properties.ListProperty` and defaults to

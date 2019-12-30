@@ -53,7 +53,19 @@ if sys.version > '3':
             '''Returns True if the referenced callable was a bound method and
             the instance no longer exists. Otherwise, return False.
             '''
-            return self.proxy is not None and not bool(dir(self.proxy))
+            try:
+                return self.proxy is not None and not bool(dir(self.proxy))
+            except ReferenceError:
+                return True
+
+        def __eq__(self, other):
+            try:
+                if type(self) is not type(other):
+                    return False
+                s = self()
+                return s is not None and s == other()
+            except:
+                return False
 
         def __repr__(self):
             return '<WeakMethod proxy={} method={} method_name={}>'.format(
@@ -107,7 +119,10 @@ else:
 
         def __eq__(self, other):
             try:
-                return type(self) is type(other) and self() == other()
+                if type(self) is not type(other):
+                    return False
+                s = self()
+                return s is not None and s == other()
             except:
                 return False
 

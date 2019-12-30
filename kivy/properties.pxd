@@ -21,17 +21,19 @@ cdef class Property:
     cdef str _name
     cdef int allownone
     cdef int force_dispatch
+    cdef object comparator
     cdef object errorvalue
     cdef object errorhandler
     cdef int errorvalue_set
     cdef public object defaultvalue
+    cdef int deprecated
     cdef init_storage(self, EventDispatcher obj, PropertyStorage storage)
     cpdef link(self, EventDispatcher obj, str name)
     cpdef link_deps(self, EventDispatcher obj, str name)
     cpdef bind(self, EventDispatcher obj, observer)
-    cpdef fast_bind(self, EventDispatcher obj, observer, tuple largs=*, dict kwargs=*)
+    cpdef fbind(self, EventDispatcher obj, observer, int ref, tuple largs=*, dict kwargs=*)
     cpdef unbind(self, EventDispatcher obj, observer)
-    cpdef fast_unbind(self, EventDispatcher obj, observer, tuple largs=*, dict kwargs=*)
+    cpdef funbind(self, EventDispatcher obj, observer, tuple largs=*, dict kwargs=*)
     cpdef unbind_uid(self, EventDispatcher obj, object uid)
     cdef compare_value(self, a, b)
     cpdef set(self, EventDispatcher obj, value)
@@ -41,8 +43,8 @@ cdef class Property:
     cpdef dispatch(self, EventDispatcher obj)
 
 cdef class NumericProperty(Property):
-    cdef float parse_str(self, EventDispatcher obj, value)
-    cdef float parse_list(self, EventDispatcher obj, value, ext)
+    cdef float parse_str(self, EventDispatcher obj, value) except *
+    cdef float parse_list(self, EventDispatcher obj, value, ext) except *
 
 cdef class StringProperty(Property):
     pass
@@ -87,8 +89,8 @@ cdef class AliasProperty(Property):
 cdef class VariableListProperty(Property):
     cdef public int length
     cdef _convert_numeric(self, EventDispatcher obj, x)
-    cdef float parse_str(self, EventDispatcher obj, value)
-    cdef float parse_list(self, EventDispatcher obj, value, ext)
+    cdef float parse_str(self, EventDispatcher obj, value) except *
+    cdef float parse_list(self, EventDispatcher obj, value, ext) except *
 
 cdef class ConfigParserProperty(Property):
     cdef object config
@@ -101,3 +103,6 @@ cdef class ConfigParserProperty(Property):
     cdef object config_name
     cpdef _edit_setting(self, section, key, value)
     cdef inline object _parse_str(self, object value)
+
+cdef class ColorProperty(Property):
+    cdef list parse_str(self, EventDispatcher obj, value)

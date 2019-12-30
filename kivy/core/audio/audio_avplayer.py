@@ -8,7 +8,6 @@ __all__ = ('SoundAvplayer', )
 from kivy.core.audio import Sound, SoundLoader
 from pyobjus import autoclass
 from pyobjus.dylib_manager import load_framework, INCLUDE
-import sys
 
 load_framework(INCLUDE.AVFoundation)
 AVAudioPlayer = autoclass("AVAudioPlayer")
@@ -19,7 +18,7 @@ NSString = autoclass("NSString")
 class SoundAvplayer(Sound):
     @staticmethod
     def extensions():
-        # taken from https://developer.apple.com/library/ios/documentation/MusicAudio/Conceptual/CoreAudioOverview/SupportedAudioFormatsMacOSX/SupportedAudioFormatsMacOSX.html
+        # taken from https://goo.gl/015kvU
         return ("aac", "adts", "aif", "aiff", "aifc", "caf", "mp3", "mp4",
                 "m4a", "snd", "au", "sd2", "wav")
 
@@ -29,9 +28,10 @@ class SoundAvplayer(Sound):
 
     def load(self):
         self.unload()
-        fn = NSString.alloc().initWithUTF8String_(self.filename)
+        fn = NSString.alloc().initWithUTF8String_(self.source)
         url = NSURL.alloc().initFileURLWithPath_(fn)
-        self._avplayer = AVAudioPlayer.alloc().initWithContentsOfURL_error_(url, None)
+        self._avplayer = AVAudioPlayer.alloc().initWithContentsOfURL_error_(
+            url, None)
 
     def unload(self):
         self.stop()
@@ -67,5 +67,6 @@ class SoundAvplayer(Sound):
         if self._avplayer:
             return self._avplayer.duration
         return super(SoundAvplayer, self)._get_length()
+
 
 SoundLoader.register(SoundAvplayer)

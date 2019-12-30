@@ -97,13 +97,13 @@ You can also simulate an alternative user preference for fontscale as follows::
 '''
 
 
-__all__ = ('Metrics', 'MetricsBase', 'pt', 'inch', 'cm', 'mm', 'dp', 'sp',
-           'metrics')
+__all__ = ('Metrics', 'MetricsBase', 'pt', 'inch', 'cm', 'mm', 'dp', 'sp')
 
 
 from os import environ
 from kivy.utils import reify, platform
 from kivy.properties import dpi2px
+from kivy.setupconfig import USE_SDL2
 
 
 def pt(value):
@@ -153,13 +153,21 @@ class MetricsBase(object):
         be taken from the Window provider (Desktop mainly) or from a
         platform-specific module (like android/ios).
         '''
+        if environ.get('KIVY_DOC_INCLUDE', None):
+            return 132.
+
         custom_dpi = environ.get('KIVY_DPI')
         if custom_dpi:
             return float(custom_dpi)
 
         if platform == 'android':
-            import android
-            return android.get_dpi()
+            if USE_SDL2:
+                import jnius
+                Hardware = jnius.autoclass('org.renpy.android.Hardware')
+                return Hardware.getDPI()
+            else:
+                import android
+                return android.get_dpi()
         elif platform == 'ios':
             import ios
             return ios.get_dpi()
@@ -188,6 +196,9 @@ class MetricsBase(object):
         '''Return the density of the screen. This value is 1 by default
         on desktops but varies on android depending on the screen.
         '''
+        if environ.get('KIVY_DOC_INCLUDE', None):
+            return 1.
+
         custom_density = environ.get('KIVY_METRICS_DENSITY')
         if custom_density:
             return float(custom_density)
@@ -202,7 +213,7 @@ class MetricsBase(object):
         elif platform == 'macosx':
             from kivy.base import EventLoop
             EventLoop.ensure_window()
-            return  EventLoop.window.dpi / 96.
+            return EventLoop.window.dpi / 96.
 
         return 1.0
 
@@ -217,7 +228,10 @@ class MetricsBase(object):
 
         if platform == 'android':
             from jnius import autoclass
-            PythonActivity = autoclass('org.renpy.android.PythonActivity')
+            if USE_SDL2:
+                PythonActivity = autoclass('org.kivy.android.PythonActivity')
+            else:
+                PythonActivity = autoclass('org.renpy.android.PythonActivity')
             config = PythonActivity.mActivity.getResources().getConfiguration()
             return config.fontScale
 
@@ -227,7 +241,3 @@ class MetricsBase(object):
 #: Default instance of :class:`MetricsBase`, used everywhere in the code
 #: .. versionadded:: 1.7.0
 Metrics = MetricsBase()
-
-#: default instance of :class:`MetricsBase`, used everywhere in the code
-#: (deprecated, use `Metrics` instead.)
-metrics = Metrics

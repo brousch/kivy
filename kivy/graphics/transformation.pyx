@@ -60,19 +60,32 @@ cdef class Matrix:
         self.identity()
 
     def get(Matrix self):
+        '''Retrieve the value of the current as a flat list.
+
+        .. versionadded:: 1.9.1
+        '''
+
+        return (
+            self.mat[0], self.mat[1], self.mat[2], self.mat[3],
+            self.mat[4], self.mat[5], self.mat[6], self.mat[7],
+            self.mat[8], self.mat[9], self.mat[10], self.mat[11],
+            self.mat[12], self.mat[13], self.mat[14], self.mat[15])
+
+    def tolist(Matrix self):
         '''Retrieve the value of the current matrix in numpy format.
-        for example m.get() will return 
+        for example m.tolist() will return::
 
-                [[1.000000, 0.000000, 0.000000, 0.000000],
-                [0.000000, 1.000000, 0.000000, 0.000000],
-                [0.000000, 0.000000, 1.000000, 0.000000],
-                [0.000000, 0.000000, 0.000000, 1.000000]]
+            [[1.000000, 0.000000, 0.000000, 0.000000],
+            [0.000000, 1.000000, 0.000000, 0.000000],
+            [0.000000, 0.000000, 1.000000, 0.000000],
+            [0.000000, 0.000000, 0.000000, 1.000000]]
 
-        you can use this format to plug the result straight into numpy 
-        in this way numpy.array(m.get()) 
+        you can use this format to plug the result straight into numpy
+        in this way numpy.array(m.tolist())
 
         .. versionadded:: 1.9.0
         '''
+
         return (
             (self.mat[0], self.mat[1], self.mat[2], self.mat[3]),
             (self.mat[4], self.mat[5], self.mat[6], self.mat[7]),
@@ -86,24 +99,42 @@ cdef class Matrix:
         '''
         return self.mat[index]
 
-    def set(Matrix self, mat):
-        '''Insert custom values into the matrix in numpy format
-        for example 
-        
-        m.set([
-            [1.0, 0.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0, 0.0],
-            [0.0, 0.0, 1.0, 0.0],
-            [0.0, 0.0, 0.0, 1.0]])
+    def set(Matrix self, flat=None, array=None):
+        '''Insert custom values into the matrix in a flat list format
+        or 4x4 array format like below::
 
-        will load in the matrix above into the matrix class
+            m.set(array=[
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0]]
+            )
 
         .. versionadded:: 1.9.0
         '''
-        self.mat[0], self.mat[1], self.mat[2], self.mat[3] = mat[0]
-        self.mat[4], self.mat[5], self.mat[6], self.mat[7] = mat[1]
-        self.mat[8], self.mat[9], self.mat[10], self.mat[11] = mat[2]
-        self.mat[12], self.mat[13], self.mat[14], self.mat[15] = mat[3]
+        if flat:
+            self.mat[0] = flat[0]
+            self.mat[1] = flat[1]
+            self.mat[2] = flat[2]
+            self.mat[3] = flat[3]
+            self.mat[4] = flat[4]
+            self.mat[5] = flat[5]
+            self.mat[6] = flat[6]
+            self.mat[7] = flat[7]
+            self.mat[8] = flat[8]
+            self.mat[9] = flat[9]
+            self.mat[10] = flat[10]
+            self.mat[11] = flat[11]
+            self.mat[12] = flat[12]
+            self.mat[13] = flat[13]
+            self.mat[14] = flat[14]
+            self.mat[15] = flat[15]
+            return
+
+        self.mat[0], self.mat[1], self.mat[2], self.mat[3] = array[0]
+        self.mat[4], self.mat[5], self.mat[6], self.mat[7] = array[1]
+        self.mat[8], self.mat[9], self.mat[10], self.mat[11] = array[2]
+        self.mat[12], self.mat[13], self.mat[14], self.mat[15] = array[3]
 
     def __setitem__(Matrix self, int index, double value):
         '''given an index and a value update the value at that location
@@ -178,11 +209,11 @@ cdef class Matrix:
 
         :Parameters:
             `x`: float
-                The scale factor along the X axis         
+                The scale factor along the X axis
             `y`: float
                 The scale factor along the Y axis
             `z`: float
-                The scale factor along the Z axis        
+                The scale factor along the Z axis
         '''
         with nogil:
             self.mat[ 0] *= x;
@@ -195,7 +226,7 @@ cdef class Matrix:
 
         :Parameters:
             `x`: float
-                The translation factor along the X axis         
+                The translation factor along the X axis
             `y`: float
                 The translation factor along the Y axis
             `z`: float
@@ -302,7 +333,7 @@ cdef class Matrix:
                 self.mat[13] = (top+bottom)/(bottom-top)
                 self.mat[2]  = 0.0
                 self.mat[6]  = 0.0
-                self.mat[10] = 2.0/(far-near)
+                self.mat[10] = -2.0/(far-near)
                 self.mat[14] = (far+near)/(near-far)
                 self.mat[3]  = 0.0
                 self.mat[7]  = 0.0
@@ -409,6 +440,13 @@ cdef class Matrix:
 
     cpdef tuple transform_point(Matrix self, double x, double y, double z,
             t=None):
+        '''Transforms the point by the matrix and returns the transformed point
+        as a ``(x, y, z)`` tuple. If the point is a vector ``v``, the returned
+        values is ``v2 = matrix * v``.
+        
+        If ``t`` is provided, it multiplies it with the last column of the matrix
+        and returns the transformed ``(x, y, z, t)``.
+        '''
         cdef double tx, ty, tz, tt
         tx = x * self.mat[0] + y * self.mat[4] + z * self.mat[ 8] + self.mat[12];
         ty = x * self.mat[1] + y * self.mat[5] + z * self.mat[ 9] + self.mat[13];
@@ -510,7 +548,7 @@ cdef class Matrix:
         the result (not inplace)::
 
             m.multiply(n) -> n * m
-            
+
         :Parameters:
             `ma`: Matrix
                 The matrix to multiply by
@@ -541,7 +579,7 @@ cdef class Matrix:
     cpdef project(Matrix self, double objx, double objy, double objz, Matrix model, Matrix proj,
             double vx, double vy, double vw, double vh):
         '''Project a point from 3d space into a 2d viewport.
-        
+
         :Parameters:
             `objx`: float
                 Points X co-ordinate
@@ -589,7 +627,3 @@ cdef class Matrix:
                    m[4], m[5], m[6], m[7],
                    m[8], m[9], m[10], m[11],
                    m[12], m[13], m[14], m[15])
-
-
-
-
